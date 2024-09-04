@@ -1,6 +1,34 @@
 import numpy as np
 import open3d as o3d
 
+T1 = np.array([
+    [ -0.45224653 , 0.70710678 , -0.54357435 , 481.26000000 ],
+    [ -0.45224653 , -0.70710678 , -0.54357435 , 481.26000000 ],
+    [ -0.76873022 , 0.00000000 , 0.63957318 , 886.20000000 ],
+    [ 0.00000000 , 0.00000000 , 0.00000000 , 1.00000000 ],
+])
+
+T2 = np.array([
+    [ 0.45224653 , 0.70710678 , 0.54357435 , -481.26000000 ],
+    [ -0.45224653 , 0.70710678 , -0.54357435 , 481.26000000 ],
+    [ -0.76873022 , 0.00000000 , 0.63957318 , 886.20000000 ],
+    [ 0.00000000 , 0.00000000 , 0.00000000 , 1.00000000 ],
+])
+
+T3 = np.array([
+    [ 0.45224653 , -0.70710678 , 0.54357435 , -481.26000000 ],
+    [ 0.45224653 , 0.70710678 , 0.54357435 , -481.26000000 ],
+    [ -0.76873022 , 0.00000000 , 0.63957318 , 886.20000000 ],
+    [ 0.00000000 , 0.00000000 , 0.00000000 , 1.00000000 ],
+])
+
+T4 = np.array([
+    [ -0.45224653 , -0.70710678 , -0.54357435 , 481.26000000 ],
+    [ 0.45224653 , -0.70710678 , 0.54357435 , -481.26000000 ],
+    [ -0.76873022 , 0.00000000 , 0.63957318 , 886.20000000 ],
+    [ 0.00000000 , 0.00000000 , 0.00000000 , 1.00000000 ],
+])
+
 
 def depth2pcd(depth, normal):
     # og intrinsics
@@ -34,28 +62,39 @@ def depth2pcd(depth, normal):
     normals = normal.reshape(-1, 3)
     pcd.normals = o3d.utility.Vector3dVector(normals)
 
-    return pcd
+    cl, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2)
+    filtered_pcd = pcd.select_by_index(ind)
+    return filtered_pcd
 
 depth0 = np.load('data/depth0.npy')
 normal0 = np.load('data/normal0.npy')
-depth1 = np.load('data/depth1.npy')
-normal1 = np.load('data/normal1.npy')
+# depth1 = np.load('data/depth1.npy')
+# normal1 = np.load('data/normal1.npy')
 height, width = depth0.shape
 
 
 # crop distance
-depth_threshold = 5
+depth_threshold = 10
 depth0 = np.clip(depth0, 0, depth_threshold)
-depth1 = np.clip(depth1, 0, depth_threshold)
+# depth1 = np.clip(depth1, 0, depth_threshold)
 
 
 pcd0 = depth2pcd(depth0, normal0)
-pcd1 = depth2pcd(depth1, normal1)
+# pcd1 = depth2pcd(depth1, normal1)
 
-# icp matching
-threshold = 0.02
+# color the point cloud
+pcd0.paint_uniform_color([1, 0.706, 0])
+# pcd1.paint_uniform_color([0, 0.651, 0.929])
 
+# add coordinate frame
+cf1 = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
 
+# mm to m
+T1[:3, 3] = 0
 
-o3d.visualization.draw_geometries([pcd0])
+# transform coordinate frame
+cf2 = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3)
+cf2 = cf2.transform(T1)
+
+o3d.visualization.draw_geometries([pcd0, cf1, cf2])
 
